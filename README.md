@@ -27,7 +27,7 @@ MIT License Copyright (c) 2018 Ahmy Yulrizka
 ## Example
 ### Using the scheduler
 create a job handler that will be called when the entry is triggered
-```
+```go
 handler := func(e cron.Entry) {
     switch e.Name {
     case "JOB A":
@@ -40,7 +40,7 @@ handler := func(e cron.Entry) {
 ```
 
 **with MySQL store**
-```
+```go
 // mysql > INSERT INTO _entries (expression, name) VALUES ("* * * * *", "JOB A")
 
 db, err := sql.Open("mysql", "username:password@tcp(127.0.0.1:3306)/cron")
@@ -53,6 +53,7 @@ if err != nil {
     log.Fatalf("Failed to initialize MysqlPersister: %v", err)
 }
 
+// start the scheduler with handler above
 scheduler, err := cron.NewScheduler(context.Backgroun(), handler, persister)
 if err != nil {
     log.Fatalf("failed to initialize scheduler: %v", err)
@@ -64,8 +65,7 @@ if err := scheduler.Run(); err != nil {
 ```
 
 **With in memory (volatile) store**
-```
-
+```go
 memPersister := cron.NewMemoryStore()
 
 entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
@@ -80,7 +80,7 @@ scheduler, err := cron.NewScheduler(context.Backgroun(), handler, mempersister)
 
 ### using only the parser
 If you just need ability to parse and check cron expression
-```
+```go
 entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
 if err != nil {
     return fmt.Errorf("failed to parse entry: %v", err)
@@ -96,22 +96,22 @@ Current limitation (by design)
 
 * Does not take account daylight saving time.
 
-  example during CEST -> CET, 02:00:00 will be run twice (at 00:00:00 UTC (02:00 CEST) and 12:00:00 (02:00 CET)).
+  example during CEST -> CET, 02:00:00 will be run twice (at 00:00:00 UTC (02:00 CEST) and 01:00:00 (02:00 CET)).
 
-  If possible always use UTC. It does mean that on DST it will be task will be 1 hour earlier. The alternative
+  If possible always use UTC. It does mean that on DST task will be executed 1 hour earlier. The alternative
   is to schedule the job one minute early or after (ex: 01:59:00 or 03:01:00).
 
 * Each run execution is in separate go routine. Which mean if your job takes more than one minute to execute,
   next one will fire one minute after the first one.
 
   If you want to skip job that next minute, you have to
-  handle this with mutex.
+  handle this with semaphore (buffered channel).
 
-  ```
+  ```go
   semA := make(chan struct{}, 1)
 
   func handler(entry cron.Entry) {
-    if entry.Name == "A" {
+    if entry.Name == "JOB A" {
         select {
         case semA <- struct{}{}:
             // run your stuff here
@@ -127,10 +127,9 @@ Current limitation (by design)
   expression.
 
 ## Contribute
-Contribution are always welcome. Please create an issue first of what you are trying to achieve or change so we can have
-open discussion.
+Contribution are always welcome. Please create a github issue first and describe your suggestion/plan to have a discussion.
 
-If you have a bug or issue, please post it on github issue
+If you have a bug or issue, please also post it on github issue
 
 ## Attribution
 Thanks to
