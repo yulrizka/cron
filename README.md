@@ -55,7 +55,7 @@ if err != nil {
 }
 
 // start the scheduler with handler above
-scheduler, err := cron.NewScheduler(context.Backgroun(), handler, sqlStore)
+scheduler, err := cron.NewScheduler(context.Background(), handler, sqlStore)
 if err != nil {
     log.Fatalf("failed to initialize scheduler: %v", err)
 }
@@ -75,11 +75,11 @@ if err != nil {
 }
 memStore.Add(entry)
 
-scheduler, err := cron.NewScheduler(context.Backgroun(), handler, memStore)
+scheduler, err := cron.NewScheduler(context.Background(), handler, memStore)
 ... // same as above
 ```
 
-### using only the parser
+### Using only the parser
 If you just need ability to parse and check cron expression
 ```go
 entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
@@ -127,11 +127,11 @@ Current limitation (by design)
 * For Simplicity  macros (@yearly, @monthly, @daily, ...) are not supported. This can easily be expressed by normal
   expression.
 
-## Contribute
+## Contributions
 Contribution are always welcome. Please create a github issue first and describe your suggestion/plan to have a discussion.
 
 If you have a bug or issue, please also post it on github issue
 
-## Attribution
+## Attributions
 Thanks to
 * Rob Figueiredo for (https://github.com/robfig/cron) which give inspiration for the parser.
