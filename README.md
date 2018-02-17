@@ -1,6 +1,7 @@
 # CRON
 [![GoDoc](http://godoc.org/github.com/yulrizka/cron?status.png)](http://godoc.org/github.com/yulrizka/cron) 
-[![Build Status](https://travis-ci.org/yulrizka/cron.svg?branch=master)](https://travis-ci.org/yulrizka/cron)
+[![Build Status](https://travis-ci.org/yulrizka/cron.svg?branch=master)](https://travis-ci.org/yulrizka/cron) 
+[![Coverage Status](https://coveralls.io/repos/github/yulrizka/cron/badge.svg?branch=master)](https://coveralls.io/github/yulrizka/cron?branch=master)
 
 Go library that schedule and parses cron expression
 
