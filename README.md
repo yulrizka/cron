@@ -48,13 +48,13 @@ if err != nil {
     log.Fatal(err)
 }
 
-persister, err := cron.NewSQLStore(db) // This will check and create necessary table if not exists
+sqlStore, err := cron.NewSQLStore(db) // This will check and create necessary table if not exists
 if err != nil {
     log.Fatalf("Failed to initialize MysqlPersister: %v", err)
 }
 
 // start the scheduler with handler above
-scheduler, err := cron.NewScheduler(context.Backgroun(), handler, persister)
+scheduler, err := cron.NewScheduler(context.Backgroun(), handler, sqlStore)
 if err != nil {
     log.Fatalf("failed to initialize scheduler: %v", err)
 }
@@ -66,15 +66,15 @@ if err := scheduler.Run(); err != nil {
 
 **With in memory (volatile) store**
 ```go
-memPersister := cron.NewMemoryStore()
+memStore := cron.NewMemoryStore()
 
 entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
 if err != nil {
     return fmt.Errorf("failed to parse entry: %v", err)
 }
-memPersister.Add(entry)
+memStore.Add(entry)
 
-scheduler, err := cron.NewScheduler(context.Backgroun(), handler, mempersister)
+scheduler, err := cron.NewScheduler(context.Backgroun(), handler, memStore)
 ... // same as above
 ```
 
