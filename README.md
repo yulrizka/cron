@@ -1,8 +1,8 @@
 # CRON
+[![GoDoc](http://godoc.org/github.com/yulrizka/cron?status.png)](http://godoc.org/github.com/yulrizka/cron) 
+[![Build Status](https://travis-ci.org/yulrizka/cron.svg?branch=master)](https://travis-ci.org/yulrizka/cron)
 
 Go library that schedule and parses cron expression
-
-Doc: TODO
 
 Features:
 * Simple parser for cron expression.

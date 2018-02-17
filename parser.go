@@ -44,12 +44,7 @@ type Entry struct {
 	minute, hour, dom, month, dow field
 }
 
-func (e Entry) String() string {
-	str := []string{e.minute.format(), e.hour.format(), e.dom.format(), e.month.format(), e.dow.format()}
-
-	return fmt.Sprintf("{ name:%q schedule:%q, location:%q }", e.Name, strings.Join(str, " "), e.Location)
-}
-
+// Match the entry with a time
 func (e Entry) Match(t time.Time) bool {
 	t = t.In(e.Location)
 
@@ -58,6 +53,12 @@ func (e Entry) Match(t time.Time) bool {
 		e.dom.match(t.Day()) &&
 		e.dow.match(int(t.Weekday())) &&
 		e.month.match(int(t.Month()))
+}
+
+func (e Entry) String() string {
+	str := []string{e.minute.format(), e.hour.format(), e.dom.format(), e.month.format(), e.dow.format()}
+
+	return fmt.Sprintf("{ name:%q schedule:%q, location:%q }", e.Name, strings.Join(str, " "), e.Location)
 }
 
 // Parse a cron expression on a location. If location is nil it uses system location
