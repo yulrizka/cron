@@ -1,3 +1,6 @@
+// package cron provides ability to parse and run a cron (https://en.wikipedia.org/wiki/Cron) like schedule
+//
+// expression parsing is inspired by https://github.com/robfig/cron
 package cron
 
 import (
@@ -47,6 +50,16 @@ func (e Entry) String() string {
 	return fmt.Sprintf("{ name:%q schedule:%q, location:%q }", e.Name, strings.Join(str, " "), e.Location)
 }
 
+func (e Entry) Match(t time.Time) bool {
+	t = t.In(e.Location)
+
+	return e.minute.match(t.Minute()) &&
+		e.hour.match(t.Hour()) &&
+		e.dom.match(t.Day()) &&
+		e.dow.match(int(t.Weekday())) &&
+		e.month.match(int(t.Month()))
+}
+
 // Parse a cron expression on a location. If location is nil it uses system location
 // it does not support macro (ex: @monthly)
 //
@@ -56,8 +69,8 @@ func (e Entry) String() string {
 //  | +---------------- Hour (0-23)         : [0, 1, 2, ..., 23]
 //  | |   +------------ Day of month (1-31) : [5, 10, 15, 20, 30]
 //  | |   |    +------- Month (1-12)        : [1, 3, 5, ..., 11]
-//  | |   |    |     +- Day of Week  (1-7)  : [Mon, Tue, Wed]
-//  5 *  */5 1-12/2 1-3
+//  | |   |    |     +- Day of Week  (0-6)  : [Sun, Mon, Tue, Wed]
+//  5 *  */5 1-12/2 0-3
 func Parse(expression string, loc *time.Location, name string) (Entry, error) {
 	if loc == nil {
 		loc = time.Local
@@ -88,7 +101,7 @@ func Parse(expression string, loc *time.Location, name string) (Entry, error) {
 	if err != nil {
 		return e, fmt.Errorf("failed parsing 'month' field %q: %v", fields[3], err)
 	}
-	e.dow, err = parseField(fields[4], 1, 7)
+	e.dow, err = parseField(fields[4], 0, 6)
 	if err != nil {
 		return e, fmt.Errorf("failed parsing 'day of week' field %q: %v", fields[4], err)
 	}
@@ -98,8 +111,9 @@ func Parse(expression string, loc *time.Location, name string) (Entry, error) {
 
 // parseField construct bitmap where position represents a value for that field
 // ex: value of minutes `1,3,5`:
-//   pos          7654 3210
-//   bit value    0010 1010  -> will be represented as uint64 value 42 (0x2A)
+//   bit             7654 3210
+//   possible value  6543 210
+//   bit value       0010 1010  -> [0,2,4] will be represented as uint64 value 42 (0x2A)
 func parseField(s string, min, max int) (field, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
