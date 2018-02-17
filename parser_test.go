@@ -6,6 +6,10 @@ import (
 )
 
 func TestParse(t *testing.T) {
+	jkt, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		t.Fatal(err)
+	}
 	type args struct {
 		expression string
 		loc        *time.Location
@@ -18,8 +22,8 @@ func TestParse(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "general expression", args: args{expression: "* * * * *", loc: time.Local},
-			want: `{ name:"general expression" schedule:"* * * * *", location:"Local" }`, wantErr: "",
+			name: "general expression", args: args{expression: "* * * * *", loc: jkt},
+			want: `{ name:"general expression" schedule:"* * * * *", location:"Asia/Jakarta" }`, wantErr: "",
 		},
 		{
 			name: "different timezone", args: args{expression: "* * * * *", loc: time.UTC},
@@ -27,63 +31,63 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name: "nil timezone", args: args{expression: "* * * * *", loc: nil},
-			want: `{ name:"nil timezone" schedule:"* * * * *", location:"Local" }`, wantErr: "",
+			want: `{ name:"nil timezone" schedule:"* * * * *", location:"UTC" }`, wantErr: "",
 		},
 		{
-			name: "normal value", args: args{expression: "59 23 31 12 6", loc: time.Local},
-			want: `{ name:"normal value" schedule:"59 23 31 12 6", location:"Local" }`, wantErr: "",
+			name: "normal value", args: args{expression: "59 23 31 12 6", loc: time.UTC},
+			want: `{ name:"normal value" schedule:"59 23 31 12 6", location:"UTC" }`, wantErr: "",
 		},
 		{
 			name: "invalid field", args: args{expression: "* * * *", loc: time.UTC}, want: ``,
 			wantErr: "got 4 want 5 expressions",
 		},
 		{
-			name: "wrong minute", args: args{expression: "60 23 31 12 6", loc: time.Local}, want: ``,
+			name: "wrong minute", args: args{expression: "60 23 31 12 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'minute' field "60": value out of range (0 - 59): 60`,
 		},
 		{
-			name: "wrong hour", args: args{expression: "59 24 31 12 6", loc: time.Local}, want: ``,
+			name: "wrong hour", args: args{expression: "59 24 31 12 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'hour' field "24": value out of range (0 - 23): 24`,
 		},
 		{
-			name: "wrong day of month 0", args: args{expression: "59 23 0 12 6", loc: time.Local}, want: ``,
+			name: "wrong day of month 0", args: args{expression: "59 23 0 12 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'day of month' field "0": value out of range (1 - 31): 0`,
 		},
 		{
-			name: "wrong day of month", args: args{expression: "59 23 32 12 6", loc: time.Local}, want: ``,
+			name: "wrong day of month", args: args{expression: "59 23 32 12 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'day of month' field "32": value out of range (1 - 31): 32`,
 		},
 		{
-			name: "wrong month 0", args: args{expression: "59 23 31 0 6", loc: time.Local}, want: ``,
+			name: "wrong month 0", args: args{expression: "59 23 31 0 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'month' field "0": value out of range (1 - 12): 0`,
 		},
 		{
-			name: "wrong month", args: args{expression: "59 23 31 13 6", loc: time.Local}, want: ``,
+			name: "wrong month", args: args{expression: "59 23 31 13 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'month' field "13": value out of range (1 - 12): 13`,
 		},
 		{
-			name: "wrong dow", args: args{expression: "59 23 31 12 7", loc: time.Local}, want: ``,
+			name: "wrong dow", args: args{expression: "59 23 31 12 7", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'day of week' field "7": value out of range (0 - 6): 7`,
 		},
 		{
-			name: "with csv", args: args{expression: "1,3,5,7,9 23 31 12 6", loc: time.Local},
-			want: `{ name:"with csv" schedule:"1,3,5,7,9 23 31 12 6", location:"Local" }`, wantErr: "",
+			name: "with csv", args: args{expression: "1,3,5,7,9 23 31 12 6", loc: time.UTC},
+			want: `{ name:"with csv" schedule:"1,3,5,7,9 23 31 12 6", location:"UTC" }`, wantErr: "",
 		},
 		{
-			name: "with csv", args: args{expression: "1,3,60 23 31 12 6", loc: time.Local}, want: ``,
+			name: "with csv", args: args{expression: "1,3,60 23 31 12 6", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'minute' field "1,3,60": value out of range (0 - 59): 60`,
 		},
 		{
-			name: "with step", args: args{expression: "*/2 23 31 12 6", loc: time.Local},
-			want: `{ name:"with step" schedule:"0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58 23 31 12 6", location:"Local" }`, wantErr: "",
+			name: "with step", args: args{expression: "*/2 23 31 12 6", loc: time.UTC},
+			want: `{ name:"with step" schedule:"0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58 23 31 12 6", location:"UTC" }`, wantErr: "",
 		},
 		{
-			name: "with step without range", args: args{expression: "30/2 23 31 12 7", loc: time.Local}, want: ``,
+			name: "with step without range", args: args{expression: "30/2 23 31 12 7", loc: time.UTC}, want: ``,
 			wantErr: `failed parsing 'minute' field "30/2": step given without range, expression "30/2"`,
 		},
 		{
-			name: "with step and range", args: args{expression: "10-30/3 23 31 12 6", loc: time.Local},
-			want: `{ name:"with step and range" schedule:"10,13,16,19,22,25,28 23 31 12 6", location:"Local" }`, wantErr: "",
+			name: "with step and range", args: args{expression: "10-30/3 23 31 12 6", loc: time.UTC},
+			want: `{ name:"with step and range" schedule:"10,13,16,19,22,25,28 23 31 12 6", location:"UTC" }`, wantErr: "",
 		},
 	}
 	for _, tt := range tests {
@@ -128,7 +132,7 @@ func TestMatch(t *testing.T) {
 		wantNotMatch []time.Time
 	}{
 		{
-			name: "match all", args: args{expression: "* * * * *", loc: time.Local},
+			name: "match all", args: args{expression: "* * * * *", loc: time.UTC},
 			wantMatch: []time.Time{
 				time.Now(),
 				zero,

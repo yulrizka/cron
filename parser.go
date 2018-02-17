@@ -61,7 +61,7 @@ func (e Entry) String() string {
 	return fmt.Sprintf("{ name:%q schedule:%q, location:%q }", e.Name, strings.Join(str, " "), e.Location)
 }
 
-// Parse a cron expression on a location. If location is nil it uses system location
+// Parse a cron expression on a location. If location is nil it uses UTC
 // it does not support macro (ex: @monthly)
 //
 // ex format:
@@ -74,7 +74,7 @@ func (e Entry) String() string {
 //  5 *  */5 1-12/2 0-3
 func Parse(expression string, loc *time.Location, name string) (Entry, error) {
 	if loc == nil {
-		loc = time.Local
+		loc = time.UTC
 	}
 	e := Entry{
 		Name:     name,
