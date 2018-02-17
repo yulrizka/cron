@@ -126,6 +126,11 @@ Current limitation (by design)
 
 * For Simplicity  macros (@yearly, @monthly, @daily, ...) are not supported. This can easily be expressed by normal
   expression.
+  
+## Projects using this lib
+* TODO
+
+Let me know if you want to list your project here.  
 
 ## Contributions
 Contribution are always welcome. Please create a github issue first and describe your suggestion/plan to have a discussion.

@@ -1,4 +1,6 @@
-// package cron provides ability to parse and run a cron (https://en.wikipedia.org/wiki/Cron) like schedule
+// package cron provides ability to parse and run a cron (https://en.wikipedia.org/wiki/Cron) like schedule.
+// It can use either SQL or Memory as a backend store. SQL store has the benefit or persistent store and
+// the ability to run multiple instance of the app
 //
 // expression parsing is inspired by https://github.com/robfig/cron
 package cron
@@ -39,9 +41,17 @@ func (f field) format() string {
 // Entry represents a single cron entry
 type Entry struct {
 	Name     string
+	Meta     string // optional metadata
 	Location *time.Location
 
+	// parsed representation of expression
 	minute, hour, dom, month, dow field
+	expression                    string
+}
+
+// Expression in string representation
+func (e Entry) Expression() string {
+	return e.expression
 }
 
 // Match the entry with a time
@@ -77,8 +87,9 @@ func Parse(expression string, loc *time.Location, name string) (Entry, error) {
 		loc = time.UTC
 	}
 	e := Entry{
-		Name:     name,
-		Location: loc,
+		Name:       name,
+		Location:   loc,
+		expression: expression,
 	}
 	fields := strings.Fields(expression)
 	if len(fields) != 5 {
