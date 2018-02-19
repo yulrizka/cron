@@ -24,9 +24,11 @@ type SqlStore struct {
 func NewSQLStore(db *sql.DB) (*SqlStore, error) {
 	store := &SqlStore{db: db}
 
-	// TODO: check database
-
 	return store, nil
+}
+
+func (s *SqlStore) Initialize(ctx context.Context) error {
+	return nil
 }
 
 // Lock the table so that no other session can read or write Entries and Triggered table
@@ -48,6 +50,23 @@ func (s *SqlStore) Lock(ctx context.Context) error {
 	_, err = s.tx.ExecContext(ctx, "LOCK TABLE ? WRITE, ? Write", EntriesTable, EventsTable)
 
 	return err
+}
+
+func (s *SqlStore) UnLock(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("empty context")
+	}
+	if !s.locked || s.tx == nil {
+		return errors.New("not locked or transaction not exists")
+	}
+
+	_, err := s.tx.ExecContext(ctx, "UNLOCK TABLES")
+
+	return err
+}
+
+func (s *SqlStore) AddEntry(ctx context.Context, entry Entry) error {
+	panic("not implemented")
 }
 
 func (s *SqlStore) GetEntries(ctx context.Context) ([]Entry, error) {
@@ -82,22 +101,14 @@ func (s *SqlStore) GetEntries(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (s *SqlStore) WriteTriggered(ctx context.Context, e Entry, t time.Time) error {
-	if ctx == nil {
-		return errors.New("empty context")
-	}
-	panic("implement me")
+func (s *SqlStore) DeleteEntry(ctx context.Context, entry Entry) error {
+	panic("not implemented")
 }
 
-func (s *SqlStore) UnLock(ctx context.Context) error {
-	if ctx == nil {
-		return errors.New("empty context")
-	}
-	if !s.locked || s.tx == nil {
-		return errors.New("not locked or transaction not exists")
-	}
+func (s *SqlStore) AddEvent(ctx context.Context, e Event) error {
+	panic("not implemented")
+}
 
-	_, err := s.tx.ExecContext(ctx, "UNLOCK TABLES")
-
-	return err
+func (s *SqlStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, error) {
+	panic("not implemented")
 }
