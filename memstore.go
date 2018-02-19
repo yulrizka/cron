@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -12,7 +13,7 @@ type MemStore struct {
 	sync.Mutex
 }
 
-func (m *MemStore) Init(ctx context.Context) error {
+func (m *MemStore) Initialize(ctx context.Context) error {
 	m.entries = make([]Entry, 0)
 	m.events = make([]Event, 0)
 	return nil
@@ -38,9 +39,10 @@ func (m *MemStore) AddEntry(ctx context.Context, entry Entry) error {
 }
 
 func (m *MemStore) DeleteEntry(ctx context.Context, entry Entry) error {
-	new := m.entries
+	var new []Entry
 	for _, v := range m.entries {
 		if v.expression == entry.expression && v.Name == entry.Name {
+			fmt.Printf("v = %+v\n", v) // for debugging
 			continue
 		}
 		new = append(new, v)
@@ -49,7 +51,7 @@ func (m *MemStore) DeleteEntry(ctx context.Context, entry Entry) error {
 	return nil
 }
 
-func (m *MemStore) WriteEvent(ctx context.Context, e Event) error {
+func (m *MemStore) AddEvent(ctx context.Context, e Event) error {
 	m.events = append(m.events, e)
 	return nil
 }
@@ -57,7 +59,7 @@ func (m *MemStore) WriteEvent(ctx context.Context, e Event) error {
 func (m *MemStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, error) {
 	var ret []Event
 	for _, v := range m.events {
-		if (v.Time.Equal(from) || v.Time.After(from)) && (v.Time.Equal(to) || v.Time.Before(to)) {
+		if (v.Time.Equal(from) || v.Time.After(from)) && v.Time.Before(to) {
 			ret = append(ret, v)
 		}
 	}
