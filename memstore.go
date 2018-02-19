@@ -14,8 +14,6 @@ type MemStore struct {
 }
 
 func (m *MemStore) Initialize(ctx context.Context) error {
-	m.entries = make([]Entry, 0)
-	m.events = make([]Event, 0)
 	return nil
 }
 

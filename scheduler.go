@@ -70,6 +70,10 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	nextRun := time.Now().Truncate(time.Minute).Add(time.Minute)
 	delay := nextRun.Sub(now)
 	time.Sleep(delay)
+	now = time.Now()
+	if err := s.check(ctx, now); err != nil {
+		log(fmt.Errorf("failed to do check on %s: %v", now, err))
+	}
 
 	ticker := time.NewTicker(time.Minute)
 	for {
