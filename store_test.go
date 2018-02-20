@@ -3,6 +3,8 @@ package cron
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -19,7 +21,22 @@ func TestCron_SQLStore(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	db, err := sql.Open("mysql", "root:root123@tcp(127.0.0.1:3306)/cron_test?parseTime=true")
+
+	env := func(key, defaultValue string) string {
+		if value := os.Getenv(key); value != "" {
+			return value
+		}
+		return defaultValue
+	}
+	user := env("MYSQL_TEST_USER", "root")
+	pass := env("MYSQL_TEST_PASS", "")
+	prot := env("MYSQL_TEST_PROT", "tcp")
+	addr := env("MYSQL_TEST_ADDR", "localhost:3306")
+	dbname := env("MYSQL_TEST_DBNAME", "gotest")
+	netAddr := fmt.Sprintf("%s(%s)", prot, addr)
+	dsn := fmt.Sprintf("%s:%s@%s/%s?timeout=30s&parseTime=true", user, pass, netAddr, dbname)
+
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
