@@ -8,6 +8,24 @@ import (
 	"time"
 )
 
+//  CREATE TABLE `_events` (
+//  `expression` varchar(255) NOT NULL,
+//  `location` varchar(255) NOT NULL,
+//  `name` varchar(255) NOT NULL,
+//  `meta` varchar(1024) DEFAULT NULL,
+//  `triggered_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+//  PRIMARY KEY (`expression`,`location`,`name`,`triggered_at`)
+//  )
+
+//  CREATE TABLE `_entries` (
+//  `expression` varchar(255) NOT NULL,
+//  `location` varchar(255) NOT NULL,
+//  `name` varchar(255) NOT NULL,
+//  `meta` varchar(1024) DEFAULT NULL,
+//  `active` tinyint(1) DEFAULT '1',
+//  PRIMARY KEY (`expression`,`location`,`name`)
+//  )
+
 var (
 	// EntriesTable in SQL table that store cron entries
 	EntriesTable = "_entries"
@@ -28,6 +46,8 @@ func NewSQLStore(db *sql.DB) (*SqlStore, error) {
 }
 
 func (s *SqlStore) Initialize(ctx context.Context) error {
+	// TODO: initialize the table
+
 	return nil
 }
 
@@ -37,7 +57,7 @@ func (s *SqlStore) Lock(ctx context.Context) error {
 		return errors.New("already locked or transaction exists")
 	}
 
-	// we use transaction because it's guarantee to give the same connection from SQL pool
+	// we use transaction because it guaranteed to give the same connection from SQL pool
 	var err error
 	txOptions := &sql.TxOptions{
 		Isolation: sql.LevelSerializable, // make sure that none is reading and writing to the table we lock
@@ -47,54 +67,65 @@ func (s *SqlStore) Lock(ctx context.Context) error {
 		return fmt.Errorf("failed to create transaction: %v", err)
 	}
 
-	_, err = s.tx.ExecContext(ctx, "LOCK TABLE ? WRITE, ? Write", EntriesTable, EventsTable)
+	_, err = s.tx.ExecContext(ctx, fmt.Sprintf("LOCK TABLE `%s` WRITE, `%s` WRITE", EntriesTable, EventsTable))
+	if err != nil {
+		return err
+	}
+	s.locked = true
 
-	return err
+	return nil
 }
 
 func (s *SqlStore) UnLock(ctx context.Context) error {
-	if ctx == nil {
-		return errors.New("empty context")
-	}
 	if !s.locked || s.tx == nil {
 		return errors.New("not locked or transaction not exists")
 	}
-
 	_, err := s.tx.ExecContext(ctx, "UNLOCK TABLES")
+	if err != nil {
+		return err
+	}
+	s.locked = false
 
-	return err
+	return nil
 }
 
 func (s *SqlStore) AddEntry(ctx context.Context, entry Entry) error {
-	panic("not implemented")
+	if entry.expression == "" {
+		return errors.New("got empty expression")
+	}
+	query := "REPLACE INTO " + EntriesTable + " (expression, location, name, meta) VALUES (?, ?, ?, ?)"
+	_, err := s.tx.ExecContext(ctx, query, entry.expression, entry.Location.String(), entry.Name, entry.Meta)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return nil
 }
 
 func (s *SqlStore) GetEntries(ctx context.Context) ([]Entry, error) {
-	if ctx == nil {
-		return nil, errors.New("empty context")
-	}
-
 	entries := make([]Entry, 0)
-	rows, err := s.tx.QueryContext(ctx, "SELECT expression, name, location FROM ? WHERE active=1", EntriesTable)
+	query := "SELECT expression, location, name, meta FROM " + EntriesTable + " WHERE active=1"
+	rows, err := s.tx.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries from DB: %v", err)
 	}
 
 	for rows.Next() {
 		var expression, location, name string
-		if err := rows.Scan(&expression, &location, &name); err != nil {
+		var meta sql.NullString
+		if err := rows.Scan(&expression, &location, &name, &meta); err != nil {
 			return nil, fmt.Errorf("failed reading a row: %v", err)
 		}
-
 		loc, err := time.LoadLocation(location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load location %q: %v", location, err)
 		}
-
 		entry, err := Parse(expression, loc, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse expression:%q loc:%q name:%q: %v", expression, loc, name, err)
 		}
+		entry.Meta = meta.String
+
 		entries = append(entries, entry)
 	}
 
@@ -102,13 +133,59 @@ func (s *SqlStore) GetEntries(ctx context.Context) ([]Entry, error) {
 }
 
 func (s *SqlStore) DeleteEntry(ctx context.Context, entry Entry) error {
-	panic("not implemented")
+	query := "DELETE FROM " + EntriesTable + " WHERE expression=? AND location=? AND name=?"
+	_, err := s.tx.ExecContext(ctx, query, entry.expression, entry.Location.String(), entry.Name)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return nil
 }
 
 func (s *SqlStore) AddEvent(ctx context.Context, e Event) error {
-	panic("not implemented")
+	query := "REPLACE INTO " + EventsTable + " (expression, location, name, triggered_at, meta) VALUES (?, ?, ?, ?, ?)"
+	expression := e.Entry.expression
+	location := e.Entry.Location.String()
+	name := e.Entry.Name
+	_, err := s.tx.ExecContext(ctx, query, expression, location, name, e.Time, e.Entry.Meta)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return nil
 }
 
 func (s *SqlStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, error) {
-	panic("not implemented")
+	query := `SELECT expression, location, name, meta, triggered_at from ` + EventsTable + ` WHERE triggered_at >= ? AND triggered_at <= ?`
+	rows, err := s.tx.QueryContext(ctx, query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("failed querying database: %v", err)
+	}
+
+	var events []Event
+	for rows.Next() {
+		var ev Event
+		var expression, location, name string
+		var meta sql.NullString
+		var triggeredAt time.Time
+
+		if err := rows.Scan(&expression, &location, &name, &meta, &triggeredAt); err != nil {
+			return nil, fmt.Errorf("failed reading a row: %v", err)
+		}
+
+		loc, err := time.LoadLocation(location)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load location %q: %v", location, err)
+		}
+		entry, err := Parse(expression, loc, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load entry expression:%q loc:%q name:%q: %v", expression, loc, name, err)
+		}
+		entry.Meta = meta.String
+		ev.Entry = entry
+		ev.Time = triggeredAt.In(loc)
+		events = append(events, ev)
+	}
+
+	return events, nil
 }

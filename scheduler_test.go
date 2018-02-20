@@ -89,7 +89,5 @@ func TestScheduler_check(t *testing.T) {
 	}
 	if got, want := len(triggered2), 0; !reflect.DeepEqual(got, want) {
 		t.Errorf("got length triggered2 %d want %d", got, want)
-
 	}
-
 }

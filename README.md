@@ -42,6 +42,13 @@ import (
 func main() {
 	ctx := context.Background()
 
+	// log error that can't be returned as return value. If you don't read this error will be silently ignored
+	go func() {
+		for err := range cron.ErrorCh {
+			log.Printf("[CRON][ERROR] %v", err)
+		}
+	}()
+
 	// this create cron entry by parsing expression.
 	expressiobn := "* * * * *"
 	location := time.UTC

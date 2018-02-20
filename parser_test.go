@@ -197,13 +197,13 @@ func TestMatch(t *testing.T) {
 
 			for i, want := range tt.wantMatch {
 				if !e.Match(want) {
-					t.Errorf("[%d] want match %s with %s but it does not", i, e.String(), want)
+					t.Errorf("[%d] want match %s with %s but it does not", i, e, want)
 				}
 			}
 
 			for i, want := range tt.wantNotMatch {
 				if e.Match(want) {
-					t.Errorf("[%d] want not match %s with %s but it does", i, e.String(), want)
+					t.Errorf("[%d] want not match %s with %s but it does", i, e, want)
 				}
 			}
 		})

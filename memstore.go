@@ -2,7 +2,6 @@ package cron
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -40,7 +39,6 @@ func (m *MemStore) DeleteEntry(ctx context.Context, entry Entry) error {
 	var new []Entry
 	for _, v := range m.entries {
 		if v.expression == entry.expression && v.Name == entry.Name {
-			fmt.Printf("v = %+v\n", v) // for debugging
 			continue
 		}
 		new = append(new, v)
