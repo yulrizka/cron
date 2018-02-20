@@ -29,68 +29,119 @@ MIT License Copyright (c) 2018 Ahmy Yulrizka
 ### Using the scheduler
 create a job handler that will be called when the entry is triggered
 ```go
-handler := func(e cron.Entry) {
-    switch e.Name {
-    case "JOB A":
-        log.Println("Handling JOB A")
-    default:
+package main
 
-    }
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/yulrizka/cron"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// log error that can't be returned as return value. If you don't read this error will be silently ignored
+	go func() {
+		for err := range cron.ErrorCh {
+			log.Printf("[CRON][ERROR] %v", err)
+		}
+	}()
+
+	// this create cron entry by parsing expression.
+	expressiobn := "* * * * *"
+	location := time.UTC
+	name := "ENTRY_1"
+	entry, err := cron.Parse(expressiobn, location, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// check if cron entry matched expression
+	if entry.Match(time.Now()) {
+		// cron entry matched
+	}
+
+	// MemsStore implenets Store object which persist entries and events (triggered entries)
+	// This store is volatile and use for example. for real usage use persisted SQLStore. see other example below
+	store := &cron.MemStore{}
+	store.AddEntry(ctx, entry)
+
+	// handler function that will be called
+	handler := func(name string) {
+		switch name {
+		case "ENTRY_1":
+			log.Printf("handling job %q", name)
+		default:
+			log.Printf("[ERROR] unknown job %q", name)
+		}
+	}
+
+	// setup the scheduler
+	scheduler := cron.NewScheduler(handler, store)
+	if err := scheduler.Run(ctx); err != nil {
+		log.Printf("[ERROR] scheduler found error: %v", err)
+	}
 }
+
 
 ```
 
 **with MySQL store**
+For persisted CRON, use SQLStore as backend. The other benefit is that you can run multiple instance
+of the application for high availability. It will make sure that the job will be executed by only one process
+by utilizing SQL lock table.
+
 ```go
-// mysql > INSERT INTO _entries (expression, name) VALUES ("* * * * *", "JOB A")
+package main
 
-db, err := sql.Open("mysql", "username:password@tcp(127.0.0.1:3306)/cron")
-if err != nil {
-    log.Fatal(err)
+import (
+	"context"
+	"database/sql"
+	"log"
+
+	"github.com/yulrizka/cron"
+)
+
+func main() {
+	// mysql > INSERT INTO _entries (expression, name) VALUES ("* * * * *", "ENTRY_1")
+
+	ctx := context.Background()
+	db, err := sql.Open("mysql", "username:password@tcp(127.0.0.1:3306)/cron")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sqlStore, err := cron.NewSQLStore(db) // This will check and create necessary table if not exists
+	if err != nil {
+		log.Fatalf("Failed to initialize MysqlPersister: %v", err)
+	}
+
+	// handler function that will be called
+	handler := func(name string) {
+		switch name {
+		case "ENTRY_1":
+			log.Printf("handling job %q", name)
+		default:
+			log.Printf("[ERROR] unknown job %q", name)
+		}
+	}
+
+	// start the scheduler with handler above
+	scheduler := cron.NewScheduler(handler, sqlStore)
+	if err != nil {
+		log.Fatalf("failed to initialize scheduler: %v", err)
+	}
+
+	// Run will check existance of required tables. If not found, it will try to create it
+	if err := scheduler.Run(ctx); err != nil {
+		log.Fatalf("scheduler does not terminate properly: %v", err)
+	}
 }
 
-sqlStore, err := cron.NewSQLStore(db) // This will check and create necessary table if not exists
-if err != nil {
-    log.Fatalf("Failed to initialize MysqlPersister: %v", err)
-}
-
-// start the scheduler with handler above
-scheduler, err := cron.NewScheduler(context.Background(), handler, sqlStore)
-if err != nil {
-    log.Fatalf("failed to initialize scheduler: %v", err)
-}
-
-if err := scheduler.Run(); err != nil {
-    log.Fatalf("scheduler does not terminate properly: %v". err)
-}
 ```
 
-**With in memory (volatile) store**
-```go
-memStore := cron.NewMemoryStore()
-
-entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
-if err != nil {
-    return fmt.Errorf("failed to parse entry: %v", err)
-}
-memStore.Add(entry)
-
-scheduler, err := cron.NewScheduler(context.Background(), handler, memStore)
-... // same as above
-```
-
-### Using only the parser
-If you just need ability to parse and check cron expression
-```go
-entry, err := cron.parse("5 *  */5 1-12/2 0-3", "JOB A", time.UTC)
-if err != nil {
-    return fmt.Errorf("failed to parse entry: %v", err)
-}
-t := time.Date(2006, 1, 2, 15, 4, 0, 0, time.UTC), // Monday, 2 January 2006 15:04:00 UTC
-if entry.Match(t) {
-    // t matched the cron expression
-}
-```
 
 ## Limitation
 Current limitation (by design)
@@ -126,6 +177,11 @@ Current limitation (by design)
 
 * For Simplicity  macros (@yearly, @monthly, @daily, ...) are not supported. This can easily be expressed by normal
   expression.
+  
+## Projects using this lib
+* TODO
+
+Let me know if you want to list your project here.  
 
 ## Contributions
 Contribution are always welcome. Please create a github issue first and describe your suggestion/plan to have a discussion.
