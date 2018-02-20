@@ -133,7 +133,7 @@ func storeTest(t *testing.T, store Store) {
 		t.Fatal(err)
 	}
 
-	err = store.UnLock(ctx)
+	err = store.Unlock(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

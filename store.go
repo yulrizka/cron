@@ -9,6 +9,25 @@ import (
 	"time"
 )
 
+type Store interface {
+	// Initialize the store
+	Initialize(ctx context.Context) error
+	// Lock the store from external read or write
+	Lock(ctx context.Context) error
+	// Unlock the store
+	Unlock(ctx context.Context) error
+	// GetEntries retrieve only active entries
+	GetEntries(ctx context.Context) ([]Entry, error)
+	// AddEntry to the store
+	AddEntry(ctx context.Context, entry Entry) error
+	// DeleteEntry from the store
+	DeleteEntry(ctx context.Context, entry Entry) error
+	//WriteEvent which is triggered cron entry
+	AddEvent(ctx context.Context, e Event) error
+	// GetEvents on [from, to)
+	GetEvents(ctx context.Context, from, to time.Time) ([]Event, error)
+}
+
 type MemStore struct {
 	entries []Entry
 	events  []Event
@@ -24,7 +43,7 @@ func (m *MemStore) Lock(ctx context.Context) error {
 	return nil
 }
 
-func (m *MemStore) UnLock(ctx context.Context) error {
+func (m *MemStore) Unlock(ctx context.Context) error {
 	m.Mutex.Unlock()
 	return nil
 }
@@ -149,7 +168,7 @@ func (s *SqlStore) Lock(ctx context.Context) error {
 	return nil
 }
 
-func (s *SqlStore) UnLock(ctx context.Context) error {
+func (s *SqlStore) Unlock(ctx context.Context) error {
 	if !s.locked || s.tx == nil {
 		return errors.New("not locked or transaction not exists")
 	}

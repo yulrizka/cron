@@ -24,25 +24,6 @@ type Event struct {
 	Time  time.Time
 }
 
-type Store interface {
-	// Initialize the store
-	Initialize(ctx context.Context) error
-	// Lock the store from external read or write
-	Lock(ctx context.Context) error
-	// Unlock the store
-	UnLock(ctx context.Context) error
-	// GetEntries retrieve only active entries
-	GetEntries(ctx context.Context) ([]Entry, error)
-	// AddEntry to the store
-	AddEntry(ctx context.Context, entry Entry) error
-	// DeleteEntry from the store
-	DeleteEntry(ctx context.Context, entry Entry) error
-	//WriteEvent which is triggered cron entry
-	AddEvent(ctx context.Context, e Event) error
-	// GetEvents on [from, to)
-	GetEvents(ctx context.Context, from, to time.Time) ([]Event, error)
-}
-
 type handler func(name string)
 
 type Scheduler struct {
@@ -99,7 +80,7 @@ func (s *Scheduler) check(ctx context.Context, on time.Time) error {
 	if err != nil {
 		return fmt.Errorf("locking store failed: %v", err)
 	}
-	defer s.store.UnLock(ctx)
+	defer s.store.Unlock(ctx)
 
 	entries, err := s.store.GetEntries(ctx)
 	if err != nil {
