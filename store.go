@@ -5,26 +5,65 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
-//  CREATE TABLE `_events` (
-//  `expression` varchar(255) NOT NULL,
-//  `location` varchar(255) NOT NULL,
-//  `name` varchar(255) NOT NULL,
-//  `meta` varchar(1024) DEFAULT NULL,
-//  `triggered_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-//  PRIMARY KEY (`expression`,`location`,`name`,`triggered_at`)
-//  )
+type MemStore struct {
+	entries []Entry
+	events  []Event
+	sync.Mutex
+}
 
-//  CREATE TABLE `_entries` (
-//  `expression` varchar(255) NOT NULL,
-//  `location` varchar(255) NOT NULL,
-//  `name` varchar(255) NOT NULL,
-//  `meta` varchar(1024) DEFAULT NULL,
-//  `active` tinyint(1) DEFAULT '1',
-//  PRIMARY KEY (`expression`,`location`,`name`)
-//  )
+func (m *MemStore) Initialize(ctx context.Context) error {
+	return nil
+}
+
+func (m *MemStore) Lock(ctx context.Context) error {
+	m.Mutex.Lock()
+	return nil
+}
+
+func (m *MemStore) UnLock(ctx context.Context) error {
+	m.Mutex.Unlock()
+	return nil
+}
+
+func (m *MemStore) GetEntries(ctx context.Context) ([]Entry, error) {
+	return m.entries, nil
+}
+
+func (m *MemStore) AddEntry(ctx context.Context, entry Entry) error {
+	m.entries = append(m.entries, entry)
+	return nil
+}
+
+func (m *MemStore) DeleteEntry(ctx context.Context, entry Entry) error {
+	var new []Entry
+	for _, v := range m.entries {
+		if v.expression == entry.expression && v.Name == entry.Name {
+			continue
+		}
+		new = append(new, v)
+	}
+	m.entries = new
+	return nil
+}
+
+func (m *MemStore) AddEvent(ctx context.Context, e Event) error {
+	m.events = append(m.events, e)
+	return nil
+}
+
+func (m *MemStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, error) {
+	var ret []Event
+	for _, v := range m.events {
+		if (v.Time.Equal(from) || v.Time.After(from)) && v.Time.Before(to) {
+			ret = append(ret, v)
+		}
+	}
+	return ret, nil
+}
 
 var (
 	// EntriesTable in SQL table that store cron entries
@@ -45,8 +84,42 @@ func NewSQLStore(db *sql.DB) (*SqlStore, error) {
 	return store, nil
 }
 
+// Initialize the sql tables if not present
 func (s *SqlStore) Initialize(ctx context.Context) error {
-	// TODO: initialize the table
+	// For now this is enough with assumption that this table is going to be stable.
+	// If in the future we need to migrate this we can introduce `_version` table for doing db migration
+	// right now, absence of that table marks that this is the initial version
+
+	// create entries table
+	query := fmt.Sprintf(`
+CREATE TABLE IF NOT EXISTS %s (
+  expression varchar(255) NOT NULL,
+  location varchar(255) NOT NULL,
+  name varchar(255) NOT NULL,
+  meta varchar(1024) DEFAULT NULL,
+  active tinyint(1) DEFAULT '1',
+  PRIMARY KEY (expression,location,name)
+)
+`, EntriesTable)
+	_, err := s.db.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed creating entries table: %v", err)
+	}
+
+	// create events table
+	query = fmt.Sprintf(`
+CREATE TABLE IF NOT EXISTS %s (
+  expression varchar(255) NOT NULL,
+  location varchar(255) NOT NULL,
+  name varchar(255) NOT NULL,
+  meta varchar(1024) DEFAULT NULL,
+  triggered_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (expression,location,name,triggered_at)
+)`, EventsTable)
+	_, err = s.db.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed creating events table: %v", err)
+	}
 
 	return nil
 }

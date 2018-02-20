@@ -28,8 +28,8 @@ func TestCron_SQLStore(t *testing.T) {
 		}
 		return defaultValue
 	}
-	user := env("MYSQL_TEST_USER", "root")
-	pass := env("MYSQL_TEST_PASS", "")
+	user := env("MYSQL_TEST_USER", "gotest")
+	pass := env("MYSQL_TEST_PASS", "secret")
 	prot := env("MYSQL_TEST_PROT", "tcp")
 	addr := env("MYSQL_TEST_ADDR", "localhost:3306")
 	dbname := env("MYSQL_TEST_DBNAME", "gotest")
