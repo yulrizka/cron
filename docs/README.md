@@ -48,9 +48,7 @@ func main() {
 	}()
 
 	// this create cron entry by parsing expression.
-	expression := "* * * * *"
-	location := time.UTC
-	name := "ENTRY_1"
+	expression, location, name := "* * * * *", time.UTC, "ENTRY_1"
 	entry, err := cron.Parse(expression, location, name)
 	if err != nil {
 		log.Fatal(err)
