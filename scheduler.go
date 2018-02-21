@@ -11,6 +11,9 @@ import (
 // For example if user are using custom logger. If user do not read the channel that error will be silently ignored
 var ErrorCh = make(chan error, 1)
 
+// KeepEventDuration in days. Recorded events outside of this duration (default 30 days) will be cleanup from the store.
+var KeepEventDuration = 30 * 24 * time.Hour
+
 func log(err error) {
 	select {
 	case ErrorCh <- err:
@@ -129,6 +132,9 @@ func (s *Scheduler) check(ctx context.Context, on time.Time) error {
 			go s.handler(e)
 		}
 	}
+
+	// cleanup
+	s.store.DeleteEvents(ctx, on.Add(-1*KeepEventDuration))
 
 	return nil
 }
