@@ -24,7 +24,7 @@ type Event struct {
 	Time  time.Time
 }
 
-type handler func(name string)
+type handler func(e Entry)
 
 type Scheduler struct {
 	handler handler
@@ -126,7 +126,7 @@ func (s *Scheduler) check(ctx context.Context, on time.Time) error {
 				continue
 			}
 
-			go s.handler(e.Name)
+			go s.handler(e)
 		}
 	}
 

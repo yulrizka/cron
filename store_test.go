@@ -82,11 +82,21 @@ func storeTest(t *testing.T, store Store) {
 		t.Fatalf("got entry %+v want %+v", got, want)
 	}
 
+	now := time.Date(2018, 12, 15, 0, 0, 0, 0, time.UTC)
 	ev := Event{
 		Entry: entry,
-		Time:  time.Date(2018, 12, 15, 0, 0, 0, 0, time.UTC),
+		Time:  now,
 	}
 	err = store.AddEvent(ctx, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ev2 := Event{
+		Entry: entry,
+		Time:  now.Add(time.Minute),
+	}
+	err = store.AddEvent(ctx, ev2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +127,7 @@ func storeTest(t *testing.T, store Store) {
 		t.Fatal(err)
 	}
 
+	// verify deleted entries
 	entries, err = store.GetEntries(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -128,9 +139,45 @@ func storeTest(t *testing.T, store Store) {
 		t.Fatalf("got entry %+v want %+v", got, want)
 	}
 
+	// cleanup the rest of the entry
 	err = store.DeleteEntry(ctx, entry2)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// we have 2 events at the moment (now, and now+1minute)
+	err = store.DeleteEvents(ctx, now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// one should still left
+	events, err = store.GetEvents(ctx, ev.Time, ev.Time.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := len(events), 1; got != want {
+		t.Fatalf("got events %d want %d", got, want)
+	}
+	if got, want := events[0].Time, ev2.Time; !got.Equal(want) {
+		t.Fatalf("got eventTime %+v want %+v", got, want)
+	}
+
+	// cleanup all events
+	// we have 2 events at the moment (now, and now+1minute)
+	err = store.DeleteEvents(ctx, now.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify is empty
+	events, err = store.GetEvents(ctx, ev.Time, ev.Time.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(events), 0; got != want {
+		t.Fatalf("got events %d want %d", got, want)
 	}
 
 	err = store.Unlock(ctx)
