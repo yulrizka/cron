@@ -37,14 +37,14 @@ func TestScheduler_check(t *testing.T) {
 
 	// there are 2 scheduler
 	var triggered1 []string
-	handler1 := func(name string) {
-		triggered1 = append(triggered1, name)
+	handler1 := func(e Entry) {
+		triggered1 = append(triggered1, e.Name)
 	}
 	scheduler1 := NewScheduler(handler1, &store)
 
 	var triggered2 []string
-	handler2 := func(name string) {
-		triggered2 = append(triggered2, name)
+	handler2 := func(e Entry) {
+		triggered2 = append(triggered2, e.Name)
 	}
 	scheduler2 := NewScheduler(handler2, &store)
 
@@ -90,4 +90,5 @@ func TestScheduler_check(t *testing.T) {
 	if got, want := len(triggered2), 0; !reflect.DeepEqual(got, want) {
 		t.Errorf("got length triggered2 %d want %d", got, want)
 	}
+
 }

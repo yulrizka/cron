@@ -26,6 +26,8 @@ type Store interface {
 	AddEvent(ctx context.Context, e Event) error
 	// GetEvents on [from, to)
 	GetEvents(ctx context.Context, from, to time.Time) ([]Event, error)
+	//DeleteEvents
+	DeleteEvents(ctx context.Context, until time.Time) error
 }
 
 type MemStore struct {
@@ -82,6 +84,18 @@ func (m *MemStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, 
 		}
 	}
 	return ret, nil
+}
+
+func (m *MemStore) DeleteEvents(ctx context.Context, until time.Time) error {
+	var filtered []Event
+	for _, v := range m.events {
+		if v.Time.Equal(until) || v.Time.After(until) {
+			filtered = append(filtered, v)
+		}
+	}
+
+	m.events = filtered
+	return nil
 }
 
 var (
@@ -177,6 +191,7 @@ func (s *SqlStore) Unlock(ctx context.Context) error {
 		return err
 	}
 	s.locked = false
+	s.tx = nil
 
 	return nil
 }
@@ -248,7 +263,7 @@ func (s *SqlStore) AddEvent(ctx context.Context, e Event) error {
 }
 
 func (s *SqlStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, error) {
-	query := `SELECT expression, location, name, meta, triggered_at from ` + EventsTable + ` WHERE triggered_at >= ? AND triggered_at <= ?`
+	query := `SELECT expression, location, name, meta, triggered_at from ` + EventsTable + ` WHERE triggered_at >= ? AND triggered_at < ?`
 	rows, err := s.tx.QueryContext(ctx, query, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying database: %v", err)
@@ -280,4 +295,14 @@ func (s *SqlStore) GetEvents(ctx context.Context, from, to time.Time) ([]Event, 
 	}
 
 	return events, nil
+}
+
+func (s *SqlStore) DeleteEvents(ctx context.Context, until time.Time) error {
+	query := "DELETE FROM " + EventsTable + " WHERE triggered_at < ?"
+	_, err := s.tx.ExecContext(ctx, query, until)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return nil
 }

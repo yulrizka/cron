@@ -69,13 +69,13 @@ func main() {
 	store.AddEntry(ctx, entry)
 
 	// handler function that will be called by the scheduler if an entry is triggered
-	handler := func(name string) {
-		// filter the by the job name
-		switch name {
+	handler := func(e cron.Entry) {
+		// filter by the job name
+		switch e.Name {
 		case "ENTRY_1":
-			log.Printf("handling job %q", name)
+			log.Printf("handling job %q", e.Name)
 		default:
-			log.Printf("[ERROR] unknown job %q", name)
+			log.Printf("[ERROR] unknown job %q", e.Name)
 		}
 	}
 
@@ -123,12 +123,12 @@ func main() {
 	}
 
 	// handler function that will be called
-	handler := func(name string) {
-		switch name {
+	handler := func(e cron.Entry) {
+		switch e.Name {
 		case "ENTRY_1":
-			log.Printf("handling job %q", name)
+			log.Printf("handling job %q", e.Name)
 		default:
-			log.Printf("[ERROR] unknown job %q", name)
+			log.Printf("[ERROR] unknown job %q", e.Name)
 		}
 	}
 
