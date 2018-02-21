@@ -7,10 +7,9 @@ Go library that schedule and parses cron expression
 
 Features:
 * Simple parser for cron expression.
-* Using SQLStore, it allows to run multiple instance of the application for high availability without needing
+* Using SQLStore, it allows running multiple instances of the application for high availability without needing
   external tool to do leader election (consul, zookeeper, etc).
-  It utilizes SQL **LOCK** tables functionality.
-* During initialization fo SQLStore, it will make sure that the tables exists.
+* During initialization fo SQLStore, it will make sure that the tables exist.
 
 ## License
 MIT License Copyright (c) 2018 Ahmy Yulrizka
@@ -40,8 +39,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// log error that can't be returned as return value. It let you choose how you would log the errors
-	// if you don't read from the channel, error will be silently discarded.
+	// log error that can't be returned as a value. It let you choose how you would log the errors
+	// if you don't read from the channel, errors will be silently discarded.
 	go func() {
 		for err := range cron.ErrorCh {
 			log.Printf("[ERROR][CRON] %v", err)
@@ -62,9 +61,9 @@ func main() {
 		// cron entry matched
 	}
 
-	// MemStore implements Store object which persist entries and events (triggered entries) to memory store.
-	// This store is volatile and used here for example. 
-	// For real usage use persisted SQLStore (other example below).
+	// MemStore implements Store object which persists entries and events (triggered entries) 
+	// to the memory store. This store will not be persisted during restart 
+	// and used here for example. For real usage use persisted SQLStore (other example below).
 	store := &cron.MemStore{}
 	store.AddEntry(ctx, entry)
 
@@ -79,20 +78,21 @@ func main() {
 		}
 	}
 
-	// setup the scheduler
+	// setup and run the scheduler
 	scheduler := cron.NewScheduler(handler, store)
 	if err := scheduler.Run(ctx); err != nil {
-		log.Printf("[ERROR] scheduler found error: %v", err)
+		log.Printf("[ERROR] scheduler got error: %v", err)
 	}
 }
 
 
 ```
 
-**with SQLStore**
+**SQLStore**
 
-Use SQLStore as backend for persistent. This should be use in most (production) cases.
-By using this store, you can run more than one instances of the application (for high availability).
+On most of the cases, you would want the entries and events to be persisted after restarts. 
+For this, we can use SQLStore. It uses SQL DB (currently tested with MySQL). 
+The other benefit is that we can run more than one instances of the application (for availability).
 It will make sure that the job will be executed only once by using SQL lock tables.
 
 ```go
@@ -156,10 +156,10 @@ Current limitation (by design)
   If possible always use UTC. It does mean that on DST task will be executed 1 hour earlier. The alternative
   would be to schedule the job one minute early or after (ex: 01:59:00 or 03:01:00).
 
-* Each run execution is in separate go routine, which mean if your job takes more than one minute to execute
+* Each run execution is in separate go routine, which means if your job takes more than one minute to execute
   next one will fire one minute after the first one. It will not wait until your first job finished.
 
-  If you want to skip second job (on the next minute), you have to handle this with semaphore (buffered channel).
+  If you want to skip second job (on the next minute), you have to handle this with a semaphore (buffered channel).
 
   ```go
   semA := make(chan struct{}, 1)
@@ -186,10 +186,10 @@ Current limitation (by design)
 Let me know if you want to list your project here.  
 
 ## Contributions
+If you have a bug or issue, please post it as github issue.
+
 Contribution are always welcome. Please create a github issue first and describe your suggestion/plan so that we can
 have open discussion about it.
-
-If you have a bug or issue, please also post it as github issue.
 
 ## Attributions
 Thanks to
