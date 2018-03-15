@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS %s (
   expression varchar(255) NOT NULL,
   location varchar(255) NOT NULL,
   name varchar(255) NOT NULL,
-  meta varchar(1024) DEFAULT NULL,
+  meta blob DEFAULT NULL,
   active tinyint(1) DEFAULT '1',
   PRIMARY KEY (expression,location,name)
 )
