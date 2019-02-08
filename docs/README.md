@@ -25,66 +25,6 @@ MIT License Copyright (c) 2018 Ahmy Yulrizka
 ```
 
 ## Example
-```go
-package main
-
-import (
-	"context"
-	"log"
-	"time"
-
-	"github.com/yulrizka/cron"
-)
-
-func main() {
-	ctx := context.Background()
-
-	// log error that can't be returned as a value. It let you choose how you would log the errors
-	// if you don't read from the channel, errors will be silently discarded.
-	go func() {
-		for err := range cron.ErrorCh {
-			log.Printf("[ERROR][CRON] %v", err)
-		}
-	}()
-
-	// this create cron entry by parsing expression.
-	expression, location, name := "* * * * *", time.UTC, "ENTRY_1"
-	entry, err := cron.Parse(expression, location, name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// if you want to check whether a time matches with the expression
-	if entry.Match(time.Now()) {
-		// cron entry matched
-	}
-
-	// MemStore implements Store object which persists entries and events (triggered entries) 
-	// to the memory store. This store will not be persisted during restart 
-	// and used here for example. For real usage use persisted SQLStore (other example below).
-	store := &cron.MemStore{}
-	store.AddEntry(ctx, entry)
-
-	// handler function that will be called by the scheduler if an entry is triggered
-	handler := func(e cron.Entry) {
-		// filter by the job name
-		switch e.Name {
-		case "ENTRY_1":
-			log.Printf("handling job %q", e.Name)
-		default:
-			log.Printf("[ERROR] unknown job %q", e.Name)
-		}
-	}
-
-	// setup and run the scheduler
-	scheduler := cron.NewScheduler(handler, store)
-	if err := scheduler.Run(ctx); err != nil {
-		log.Printf("[ERROR] scheduler got error: %v", err)
-	}
-}
-
-
-```
 
 **SQLStore**
 
@@ -143,6 +83,65 @@ func main() {
 }
 ```
 
+**Memory Store**
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/yulrizka/cron"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// log error that can't be returned as a value. It let you choose how you would log the errors
+	// if you don't read from the channel, errors will be silently discarded.
+	go func() {
+		for err := range cron.ErrorCh {
+			log.Printf("[ERROR][CRON] %v", err)
+		}
+	}()
+
+	// this create cron entry by parsing expression.
+	expression, location, name := "* * * * *", time.UTC, "ENTRY_1"
+	entry, err := cron.Parse(expression, location, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// if you want to check whether a time matches with the expression
+	if entry.Match(time.Now()) {
+		// cron entry matched
+	}
+
+	// MemStore implements Store object which persists entries and events (triggered entries) 
+	// to the memory store. This store will not be persisted during restart 
+	// and used here for example. For real usage use persisted SQLStore (other example below).
+	store := &cron.MemStore{}
+	store.AddEntry(ctx, entry)
+
+	// handler function that will be called by the scheduler if an entry is triggered
+	handler := func(e cron.Entry) {
+		// filter by the job name
+		switch e.Name {
+		case "ENTRY_1":
+			log.Printf("handling job %q", e.Name)
+		default:
+			log.Printf("[ERROR] unknown job %q", e.Name)
+		}
+	}
+
+	// setup and run the scheduler
+	scheduler := cron.NewScheduler(handler, store)
+	if err := scheduler.Run(ctx); err != nil {
+		log.Printf("[ERROR] scheduler got error: %v", err)
+	}
+}
+```
 
 ## Limitation
 Current limitation (by design)
