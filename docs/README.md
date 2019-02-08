@@ -47,8 +47,6 @@ import (
 )
 
 func main() {
-	// mysql > INSERT INTO _entries (expression, location, name) VALUES ("* * * * *", "UTC", "ENTRY_1")
-
 	ctx := context.Background()
 	db, err := sql.Open("mysql", "username:password@tcp(127.0.0.1:3306)/cron")
 	if err != nil {
@@ -59,6 +57,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize MysqlPersister: %v", err)
 	}
+
+	err := sqlStore.Initialize() // create mysql table if not exists
+	if err != nil {
+		log.Fatalf("Failed to initialize Table: %v", err)
+	}
+	// add entry of job 'ENTRY-1' to the table manually via mysql client
+	// mysql > INSERT INTO _entries (expression, location, name) VALUES ("* * * * *", "UTC", "ENTRY_1")
+
 
 	// handler function that will be called
 	handler := func(e cron.Entry) {
